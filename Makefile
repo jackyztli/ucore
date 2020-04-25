@@ -117,7 +117,40 @@ LIBDIR	+= libs
 $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 
 # -------------------------------------------------------------------
-#kernel
+# kernel
+
+#KINCLUDE	+= kern/debug/ \
+			   kern/driver/ \
+			   kern/trap/ \
+			   kern/mm/
+
+#KSRCDIR		+= kern/init \
+			   kern/libs \
+			   kern/debug \
+			   kern/driver \
+			   kern/trap \
+			   kern/mm
+
+#KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
+
+#$(call add_files_cc,$(call listf_cc,$(KSRCDIR)),kernel,$(KCFLAGS))
+
+#KOBJS	= $(call read_packet,kernel libs)
+
+# create kernel target
+#kernel = $(call totarget,kernel)
+
+#$(kernel): tools/kernel.ld
+
+#$(kernel): $(KOBJS)
+#	@echo + ld $@
+#	$(V)$(LD) $(LDFLAGS) -T tools/kernel.ld -o $@ $(KOBJS)
+#	@$(OBJDUMP) -S $@ > $(call asmfile,kernel)
+#	@$(OBJDUMP) -t $@ | $(SED) '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(call symfile,kernel)
+
+#$(call create_target,kernel)
+
+# -------------------------------------------------------------------
 
 # create bootblock
 bootfiles = $(call listf_cc,boot)
@@ -134,8 +167,92 @@ $(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,sign)
 
 $(call create_target,bootblock)
 
+# -------------------------------------------------------------------
+
+# create 'sign' tools
+$(call add_files_host,tools/sign.c,sign,sign)
+$(call create_target_host,sign,sign)
+
+# -------------------------------------------------------------------
+
+# create ucore.img
+UCOREIMG	:= $(call totarget,ucore.img)
+
+$(UCOREIMG): $(kernel) $(bootblock)
+	$(V)dd if=/dev/zero of=$@ count=10000
+	$(V)dd if=$(bootblock) of=$@ conv=notrunc
+	#$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc
+
+$(call create_target,ucore.img)
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+$(call finish_all)
+
+IGNORE_ALLDEPS	= clean \
+				  dist-clean \
+				  grade \
+				  touch \
+				  print-.+ \
+				  handin
+
+ifeq ($(call match,$(MAKECMDGOALS),$(IGNORE_ALLDEPS)),0)
+-include $(ALLDEPS)
+endif
+
+# files for grade script
+
+TARGETS: $(TARGETS)
+
+.DEFAULT_GOAL := TARGETS
+
+.PHONY: qemu qemu-nox debug debug-nox
+qemu-mon: $(UCOREIMG)
+	$(V)$(QEMU)  -no-reboot -monitor stdio -hda $< -serial null
+qemu: $(UCOREIMG)
+	$(V)$(QEMU) -no-reboot -parallel stdio -hda $< -serial null
+log: $(UCOREIMG)
+	$(V)$(QEMU) -no-reboot -d int,cpu_reset  -D q.log -parallel stdio -hda $< -serial null
+qemu-nox: $(UCOREIMG)
+	$(V)$(QEMU)   -no-reboot -serial mon:stdio -hda $< -nographic
+gdb: $(UCOREIMG)
+	$(V)$(QEMU) -S -s -parallel stdio -hda $< -serial null
+
+TERMINAL        :=gnome-terminal
+debug: $(UCOREIMG)
+	$(V)$(QEMU) -S -s -parallel stdio -hda $< -serial null &
+	$(V)sleep 2
+	$(V)$(TERMINAL) -e "gdb -q -tui -x tools/gdbinit"
+	
+debug-nox: $(UCOREIMG)
+	$(V)$(QEMU) -S -s -serial mon:stdio -hda $< -nographic &
+	$(V)sleep 2
+	$(V)$(TERMINAL) -e "gdb -q -x tools/gdbinit"
+
+.PHONY: grade touch
+
+GRADE_GDB_IN	:= .gdb.in
+GRADE_QEMU_OUT	:= .qemu.out
+HANDIN			:= proj$(PROJ)-handin.tar.gz
+
+TOUCH_FILES		:= kern/trap/trap.c
+
+MAKEOPTS		:= --quiet --no-print-directory
+
+grade:
+	$(V)$(MAKE) $(MAKEOPTS) clean
+	$(V)$(SH) tools/grade.sh
+
+touch:
+	$(V)$(foreach f,$(TOUCH_FILES),$(TOUCH) $(f))
+
+print-%:
+	@echo $($(shell echo $(patsubst print-%,%,$@) | $(TR) [a-z] [A-Z]))
+
 .PHONY: clean dist-clean handin packall tags
 clean:
+	$(V)$(RM) $(GRADE_GDB_IN) $(GRADE_QEMU_OUT) cscope* tags
+	-$(RM) -r $(OBJDIR) $(BINDIR)
 
 dist-clean: clean
 	-$(RM) $(HANDIN)

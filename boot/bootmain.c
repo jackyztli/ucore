@@ -1,6 +1,7 @@
-#include <stdlib.h>
+//#include <stdlib.h>
 
 int bootmain()
 {
-    exit(1);
+    //exit(1);
+    return 1;
 }
