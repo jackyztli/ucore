@@ -117,21 +117,22 @@ LIBDIR	+= libs
 $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 
 # -------------------------------------------------------------------
+#kernel
 
 # create bootblock
 bootfiles = $(call listf_cc,boot)
-#$(foreach f,$(bootfiles),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))
+$(foreach f,$(bootfiles),$(call cc_compile,$(f),$(CC),$(CFLAGS) -Os -nostdinc))
 
-#bootblock = $(call totarget,bootblock)
+bootblock = $(call totarget,bootblock)
 
-#$(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,sign)
-#	@echo + ld $@
-#	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)
-#	@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
-#	@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
-#	@$(call totarget,sign) $(call outfile,bootblock) $(bootblock)
+$(bootblock): $(call toobj,$(bootfiles)) | $(call totarget,sign)
+	@echo + ld $@
+	$(V)$(LD) $(LDFLAGS) -N -e start -Ttext 0x7C00 $^ -o $(call toobj,bootblock)
+	@$(OBJDUMP) -S $(call objfile,bootblock) > $(call asmfile,bootblock)
+	@$(OBJCOPY) -S -O binary $(call objfile,bootblock) $(call outfile,bootblock)
+	@$(call totarget,sign) $(call outfile,bootblock) $(bootblock)
 
-#$(call create_target,bootblock)
+$(call create_target,bootblock)
 
 .PHONY: clean dist-clean handin packall tags
 clean:
