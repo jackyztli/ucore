@@ -45,7 +45,7 @@ endif
 
 # define compiler and flags
 ifndef  USELLVM
-HOSTCC		:= gcc
+HOSTCC		:= gcc -g
 HOSTCFLAGS	:= -g -Wall -O2
 CC		:= $(GCCPREFIX)gcc
 CFLAGS	:= -march=i686 -fno-builtin -fno-PIC -Wall -ggdb -m32 -gstabs -nostdinc $(DEFS)
@@ -108,7 +108,8 @@ match = $(shell echo $(2) | $(AWK) '{for(i=1;i<=NF;i++){if(match("$(1)","^"$$(i)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # include kernel/user
 
-INCLUDE	+= libs/
+INCLUDE	+= libs/ \
+           /usr/include/
 
 CFLAGS	+= $(addprefix -I,$(INCLUDE))
 
