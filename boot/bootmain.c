@@ -1,9 +1,10 @@
 #include <stdint.h>
 
 #include "x86.h"
+#include "elf.h"
 
 // 内核起始地址
-#define SYSSEG 0x10000
+#define ELFHEADER ((struct elfhdr *)0x10000)
 // 扇区大小
 #define SECTSIZE 512
 
@@ -51,10 +52,31 @@ static void readSeg(uintptr_t va, uint32_t count, uint32_t offset)
  */
 int bootmain()
 {
-    // 从第一个扇区读入内核
-    readSeg((uintptr_t)SYSSEG, SECTSIZE * 8, 0);
+    /* 从第一个扇区读入内核 */
+    readSeg((uintptr_t)ELFHEADER, SECTSIZE * 8, 0);
     
-    // 调用内核的启动函数
-    
+    /* 非法文件 */
+    if (ELFHEADER->e_magic != ELF_MAGIC) {
+        goto bad;
+    }
+
+    /* 手动载入可运行文件并执行 */
+    struct proghdr *ph;
+    struct proghdr *eph;
+    ph = (struct proghdr *)(ELFHEADER + ELFHEADER->e_phoff);
+    eph = ph + ELFHEADER->e_phnum;
+    for (; ph < eph; ph++) {
+        readSeg(ph->p_va & 0xFFFFFF, ph->p_memsz, ph->p_offset);
+    }
+
+    /* 调用内核的启动函数 */
+    ((void (*) (void)) (ELFHEADER->e_entry & 0xFFFFFF)) ();
+
     return 1;
+
+bad:
+    outw(0x8A00, 0x8A00);
+    outw(0x8A00, 0x8E00);
+
+    while (1);
 }
