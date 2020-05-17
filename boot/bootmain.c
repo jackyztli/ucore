@@ -1,35 +1,11 @@
-//#include <stdlib.h>
 #include <stdint.h>
+
+#include "x86.h"
 
 // 内核起始地址
 #define SYSSEG 0x10000
 // 扇区大小
 #define SECTSIZE 512
-
-/*
- * 功能描述：从I/O端口读取一个字节
- */
-static inline uint8_t inb(uint16_t port)
-{
-    uint8_t data;
-    asm volatile("inb %1, %0" : "=a"(data) : "d"(port));
-    return data;
-}
-
-static inline void outb(uint16_t port, uint8_t data)
-{
-    asm volatile ("outb %0, %1" :: "a" (data), "d" (port));
-}
-
-static inline void insl(uint32_t port, void *addr, int cnt)
-{
-    asm volatile (
-        "cld;"
-        "repne; insl;"
-        : "=D" (addr), "=c" (cnt)
-        : "d" (port), "0" (addr), "1" (cnt)
-        : "memory", "cc");
-}
 
 /*
  * 功能描述：将单个扇区读入到buff处
@@ -70,6 +46,9 @@ static void readSeg(uintptr_t va, uint32_t count, uint32_t offset)
     }
 }
 
+/*
+ * 功能描述：bootloader 负责读取kernel部分
+ */
 int bootmain()
 {
     // 从第一个扇区读入内核
