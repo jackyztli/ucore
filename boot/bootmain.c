@@ -50,7 +50,7 @@ static void readSeg(uintptr_t va, uint32_t count, uint32_t offset)
 /*
  * 功能描述：bootloader 负责读取kernel部分
  */
-int bootmain()
+void bootmain()
 {
     /* 从第一个扇区读入内核 */
     readSeg((uintptr_t)ELFHEADER, SECTSIZE * 8, 0);
@@ -68,11 +68,8 @@ int bootmain()
     for (; ph < eph; ph++) {
         readSeg(ph->p_va & 0xFFFFFF, ph->p_memsz, ph->p_offset);
     }
-
     /* 调用内核的启动函数 */
     ((void (*) (void)) (ELFHEADER->e_entry & 0xFFFFFF)) ();
-
-    return 1;
 
 bad:
     outw(0x8A00, 0x8A00);

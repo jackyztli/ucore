@@ -1,5 +1,5 @@
-#ifndef LIBS_X86.h
-#define LIBS_X86.h
+#ifndef LIBS_X86_H
+#define LIBS_X86_H
 
 static inline uint8_t inb(uint16_t port) __attribute__((always_inline));
 static inline void insl(uint32_t port, void *addr, int cnt) __attribute__((always_inline));
