@@ -120,36 +120,37 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 # -------------------------------------------------------------------
 # kernel
 
+KINCLUDE += ""
 #KINCLUDE	+= kern/debug/ \
 			   kern/driver/ \
 			   kern/trap/ \
 			   kern/mm/
 
-#KSRCDIR		+= kern/init \
-			   kern/libs \
+KSRCDIR		+= kern/init 
+#			   kern/libs \
 			   kern/debug \
 			   kern/driver \
 			   kern/trap \
 			   kern/mm
 
-#KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
+KCFLAGS		+= $(addprefix -I,$(KINCLUDE))
 
-#$(call add_files_cc,$(call listf_cc,$(KSRCDIR)),kernel,$(KCFLAGS))
+$(call add_files_cc,$(call listf_cc,$(KSRCDIR)),kernel,$(KCFLAGS))
 
-#KOBJS	= $(call read_packet,kernel libs)
+KOBJS	= $(call read_packet,kernel libs)
 
 # create kernel target
-#kernel = $(call totarget,kernel)
+kernel = $(call totarget,kernel)
 
-#$(kernel): tools/kernel.ld
+$(kernel): tools/kernel.ld
 
-#$(kernel): $(KOBJS)
-#	@echo + ld $@
-#	$(V)$(LD) $(LDFLAGS) -T tools/kernel.ld -o $@ $(KOBJS)
-#	@$(OBJDUMP) -S $@ > $(call asmfile,kernel)
-#	@$(OBJDUMP) -t $@ | $(SED) '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(call symfile,kernel)
+$(kernel): $(KOBJS)
+	@echo + ld $@
+	$(V)$(LD) $(LDFLAGS) -T tools/kernel.ld -o $@ $(KOBJS)
+	@$(OBJDUMP) -S $@ > $(call asmfile,kernel)
+	@$(OBJDUMP) -t $@ | $(SED) '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(call symfile,kernel)
 
-#$(call create_target,kernel)
+$(call create_target,kernel)
 
 # -------------------------------------------------------------------
 
@@ -182,7 +183,7 @@ UCOREIMG	:= $(call totarget,ucore.img)
 $(UCOREIMG): $(kernel) $(bootblock)
 	$(V)dd if=/dev/zero of=$@ count=10000
 	$(V)dd if=$(bootblock) of=$@ conv=notrunc
-	#$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc
+	$(V)dd if=$(kernel) of=$@ seek=1 conv=notrunc
 
 $(call create_target,ucore.img)
 
