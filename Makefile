@@ -120,13 +120,14 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 # -------------------------------------------------------------------
 # kernel
 
-KINCLUDE += ""
+KINCLUDE    += kernel/driver
 #KINCLUDE	+= kern/debug/ \
 			   kern/driver/ \
 			   kern/trap/ \
 			   kern/mm/
 
-KSRCDIR		+= kernel/init 
+KSRCDIR		+= kernel/init \
+			   kernel/driver
 #			   kern/libs \
 			   kern/debug \
 			   kern/driver \
