@@ -1,7 +1,10 @@
-#include <stdint.h>
+#include <defs.h>
 #include <x86.h>
 #include <stdio.h>
 #include <string.h>
+#include <kbdreg.h>
+#include <picirq.h>
+#include <trap.h>
 
 /* stupid I/O delay routine necessitated by historical PC design flaws */
 static void
@@ -58,18 +61,18 @@ static uint16_t addr_6845;
 //    -- 数据寄存器 映射 到 端口 0x3D5或0x3B5 
 //    -- 索引寄存器 0x3D4或0x3B4,决定在数据寄存器中的数据表示什么。
 
-/* cga 显示屏初始化 */
-static void cga_init(void)
-{
-    volatile uint16_t *cp = (uint16_t *)CGA_BUF;               //CGA_BUF: 0xB8000 (彩色显示的显存物理基址)
-    uint16_t was = *cp;                                        //保存当前显存0xB8000处的值
+/* TEXT-mode CGA/VGA display output */
+static void
+cga_init(void) {
+    volatile uint16_t *cp = (uint16_t *)CGA_BUF;   //CGA_BUF: 0xB8000 (彩色显示的显存物理基址)
+    uint16_t was = *cp;                                            //保存当前显存0xB8000处的值
     *cp = (uint16_t) 0xA55A;                                   // 给这个地址随便写个值，看看能否再读出同样的值
-    if (*cp != 0xA55A) {                                       // 如果读不出来，说明没有这块显存，即是单显配置
-        cp = (uint16_t*)MONO_BUF;                              //设置为单显的显存基址 MONO_BUF： 0xB0000
-        addr_6845 = MONO_BASE;                                 //设置为单显控制的IO地址，MONO_BASE: 0x3B4
-    } else {                                                   // 如果读出来了，有这块显存，即是彩显配置
-        *cp = was;                                             //还原原来显存位置的值
-        addr_6845 = CGA_BASE;                                  //设置为彩显控制的IO地址，CGA_BASE: 0x3D4 
+    if (*cp != 0xA55A) {                                            // 如果读不出来，说明没有这块显存，即是单显配置
+        cp = (uint16_t*)MONO_BUF;                         //设置为单显的显存基址 MONO_BUF： 0xB0000
+        addr_6845 = MONO_BASE;                           //设置为单显控制的IO地址，MONO_BASE: 0x3B4
+    } else {                                                                // 如果读出来了，有这块显存，即是彩显配置
+        *cp = was;                                                      //还原原来显存位置的值
+        addr_6845 = CGA_BASE;                               // 设置为彩显控制的IO地址，CGA_BASE: 0x3D4 
     }
 
     // Extract cursor location
@@ -88,8 +91,8 @@ static void cga_init(void)
 
 static bool serial_exists = 0;
 
-static void serial_init(void)
-{
+static void
+serial_init(void) {
     // Turn off the FIFO
     outb(COM1 + COM_FCR, 0);
 
@@ -117,8 +120,8 @@ static void serial_init(void)
     }
 }
 
-static void lpt_putc_sub(int c)
-{
+static void
+lpt_putc_sub(int c) {
     int i;
     for (i = 0; !(inb(LPTPORT + 1) & 0x80) && i < 12800; i ++) {
         delay();
@@ -129,8 +132,8 @@ static void lpt_putc_sub(int c)
 }
 
 /* lpt_putc - copy console output to parallel port */
-static void lpt_putc(int c)
-{
+static void
+lpt_putc(int c) {
     if (c != '\b') {
         lpt_putc_sub(c);
     }
@@ -142,8 +145,8 @@ static void lpt_putc(int c)
 }
 
 /* cga_putc - print character to console */
-static void cga_putc(int c)
-{
+static void
+cga_putc(int c) {
     // set black on white
     if (!(c & ~0xFF)) {
         c |= 0x0700;
@@ -183,8 +186,8 @@ static void cga_putc(int c)
     outb(addr_6845 + 1, crt_pos);
 }
 
-static void serial_putc_sub(int c)
-{
+static void
+serial_putc_sub(int c) {
     int i;
     for (i = 0; !(inb(COM1 + COM_LSR) & COM_LSR_TXRDY) && i < 12800; i ++) {
         delay();
@@ -193,8 +196,8 @@ static void serial_putc_sub(int c)
 }
 
 /* serial_putc - print character to serial port */
-static void serial_putc(int c)
-{
+static void
+serial_putc(int c) {
     if (c != '\b') {
         serial_putc_sub(c);
     }
@@ -223,8 +226,8 @@ static struct {
  * cons_intr - called by device interrupt routines to feed input
  * characters into the circular console input buffer.
  * */
-static void cons_intr(int (*proc)(void))
-{
+static void
+cons_intr(int (*proc)(void)) {
     int c;
     while ((c = (*proc)()) != -1) {
         if (c != 0) {
@@ -237,8 +240,8 @@ static void cons_intr(int (*proc)(void))
 }
 
 /* serial_proc_data - get data from serial port */
-static int serial_proc_data(void)
-{
+static int
+serial_proc_data(void) {
     if (!(inb(COM1 + COM_LSR) & COM_LSR_DATA)) {
         return -1;
     }
@@ -250,8 +253,8 @@ static int serial_proc_data(void)
 }
 
 /* serial_intr - try to feed input characters from serial port */
-void serial_intr(void) 
-{
+void
+serial_intr(void) {
     if (serial_exists) {
         cons_intr(serial_proc_data);
     }
@@ -357,8 +360,8 @@ static uint8_t *charcode[4] = {
  * The kbd_proc_data() function gets data from the keyboard.
  * If we finish a character, return it, else 0. And return -1 if no data.
  * */
-static int kbd_proc_data(void)
-{
+static int
+kbd_proc_data(void) {
     int c;
     uint8_t data;
     static uint32_t shift;
@@ -405,21 +408,21 @@ static int kbd_proc_data(void)
 }
 
 /* kbd_intr - try to feed input characters from keyboard */
-static void kbd_intr(void)
-{
+static void
+kbd_intr(void) {
     cons_intr(kbd_proc_data);
 }
 
-static void kbd_init(void)
-{
+static void
+kbd_init(void) {
     // drain the kbd buffer
     kbd_intr();
     pic_enable(IRQ_KBD);
 }
 
-/* 初始化控制台设备 */
-void cons_init(void)
-{
+/* cons_init - initializes the console devices */
+void
+cons_init(void) {
     cga_init();
     serial_init();
     kbd_init();
@@ -429,8 +432,8 @@ void cons_init(void)
 }
 
 /* cons_putc - print a single character @c to console devices */
-void cons_putc(int c)
-{
+void
+cons_putc(int c) {
     lpt_putc(c);
     cga_putc(c);
     serial_putc(c);
@@ -440,8 +443,8 @@ void cons_putc(int c)
  * cons_getc - return the next input character from console,
  * or 0 if none waiting.
  * */
-int cons_getc(void)
-{
+int
+cons_getc(void) {
     int c;
 
     // poll for any pending input characters,

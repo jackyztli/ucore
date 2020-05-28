@@ -1,2 +1,0 @@
-# ucore
-ucore kernel

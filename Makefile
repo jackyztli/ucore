@@ -45,7 +45,7 @@ endif
 
 # define compiler and flags
 ifndef  USELLVM
-HOSTCC		:= gcc -g
+HOSTCC		:= gcc
 HOSTCFLAGS	:= -g -Wall -O2
 CC		:= $(GCCPREFIX)gcc
 CFLAGS	:= -march=i686 -fno-builtin -fno-PIC -Wall -ggdb -m32 -gstabs -nostdinc $(DEFS)
@@ -108,8 +108,7 @@ match = $(shell echo $(2) | $(AWK) '{for(i=1;i<=NF;i++){if(match("$(1)","^"$$(i)
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # include kernel/user
 
-INCLUDE	+= libs/ \
-           /usr/include/
+INCLUDE	+= libs/
 
 CFLAGS	+= $(addprefix -I,$(INCLUDE))
 
@@ -120,15 +119,13 @@ $(call add_files_cc,$(call listf_cc,$(LIBDIR)),libs,)
 # -------------------------------------------------------------------
 # kernel
 
-KINCLUDE    += kernel/driver
-#KINCLUDE	+= kern/debug/ \
+KINCLUDE	+= kern/debug/ \
 			   kern/driver/ \
 			   kern/trap/ \
 			   kern/mm/
 
-KSRCDIR		+= kernel/init \
-			   kernel/driver
-#			   kern/libs \
+KSRCDIR		+= kern/init \
+			   kern/libs \
 			   kern/debug \
 			   kern/driver \
 			   kern/trap \
@@ -273,4 +270,3 @@ tags:
 	$(V)find . -type f -name "*.[chS]" >cscope.files
 	$(V)cscope -bq 
 	$(V)ctags -L cscope.files
-
