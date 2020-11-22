@@ -1,7 +1,6 @@
-#include <stdint.h>
-
 #include "x86.h"
 #include "elf.h"
+#include "stdint.h"
 
 // 内核起始地址
 #define ELFHEADER ((struct elfhdr *)0x10000)

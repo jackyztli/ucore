@@ -1,11 +1,9 @@
-#include <stdint.h>
-#include <x86.h>
-#include <stdio.h>
-#include <string.h>
+#include "x86.h"
+#include "stdint.h"
 
 /* stupid I/O delay routine necessitated by historical PC design flaws */
-static void
-delay(void) {
+static void delay(void)
+{
     inb(0x84);
     inb(0x84);
     inb(0x84);

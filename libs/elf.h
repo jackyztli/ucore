@@ -1,5 +1,6 @@
 #ifndef LIBS_ELF_H
 #define LIBS_EFL_H
+#include "stdint.h"
 
 #define ELF_MAGIC 0x464C457FU /* 小端机器魔术字 */
 
